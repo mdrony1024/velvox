@@ -1,1 +1,112 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "public/**/*",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public/$1"
+    }
+  ]
+}```
 
+#### ৩. `public/index.html` ফাইল
+এটি আপনার TeraBox-স্টাইলের ওয়েব ভিউয়ার।
+*   **ফাইল পাথ:** `velgram-bot/public/index.html`
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velgram File Download</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <script src="https://ad.gigapub.tech/script?id=1399"></script>
+
+    <style>
+        :root {
+            --primary-color: #0d82ff;
+            --background-color: #f4f7f9;
+            --card-background: #ffffff;
+            --text-color: #1d2129;
+            --text-light: #65676b;
+        }
+        body { margin: 0; font-family: 'Inter', sans-serif; background-color: var(--background-color); color: var(--text-color); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 15px; box-sizing: border-box; }
+        .container { max-width: 400px; width: 100%; background-color: var(--card-background); border-radius: 16px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); padding: 24px; box-sizing: border-box; text-align: center; }
+        .logo { max-height: 40px; margin-bottom: 24px; }
+        .file-preview { width: 100%; margin-bottom: 20px; }
+        .file-preview video, .file-preview .icon-placeholder { width: 100%; max-height: 250px; background-color: #e9ecef; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 60px; color: var(--primary-color); }
+        .file-info h2 { font-size: 1.25rem; margin: 0 0 8px 0; word-wrap: break-word; }
+        .file-info p { font-size: 0.9rem; color: var(--text-light); margin: 0; }
+        #file-description { margin-top: 10px; background-color: #f0f2f5; padding: 10px; border-radius: 8px; text-align: left; white-space: pre-wrap; font-size: 0.85rem; max-height: 100px; overflow-y: auto; }
+        .action-area { margin-top: 24px; }
+        .download-btn { display: inline-flex; align-items: center; justify-content: center; width: 100%; padding: 15px; font-size: 1.1rem; font-weight: 700; color: #fff; background-color: var(--primary-color); border: none; border-radius: 12px; text-decoration: none; transition: background-color 0.2s ease, transform 0.1s ease; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); cursor: pointer; }
+        .download-btn.disabled { background-color: #a0a0a0; cursor: not-allowed; }
+        .download-btn:not(.disabled):hover { background-color: #0b73e0; }
+        .download-btn:not(.disabled):active { transform: scale(0.98); }
+        .download-btn svg { margin-right: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <img src="YOUR_LOGO_URL" alt="Velgram Logo" class="logo">
+        </header>
+        <main>
+            <div class="file-preview" id="file-preview"><div class="icon-placeholder">🎬</div></div>
+            <div class="file-info">
+                <h2 id="file-name">Loading file...</h2>
+                <p id="file-size">Size: calculating...</p>
+                <div id="file-description"></div> 
+            </div>
+            <div class="action-area">
+                <a href="#" id="download-button" class="download-btn disabled">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span>Watch Ad & Download</span>
+                </a>
+            </div>
+        </main>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const fileCode = params.get('file_code');
+            const previewEl = document.getElementById('file-preview'), nameEl = document.getElementById('file-name'), sizeEl = document.getElementById('file-size'), descriptionEl = document.getElementById('file-description'), downloadBtn = document.getElementById('download-button');
+            let downloadInfo = {};
+            if (!fileCode) { nameEl.textContent = 'Invalid Link'; downloadBtn.classList.add('disabled'); return; }
+            fetch(`/api/file-info?file_code=${fileCode}`).then(response => { if (!response.ok) throw new Error('File not found or server error.'); return response.json(); }).then(data => {
+                if (data.error) { nameEl.textContent = data.error; return; }
+                nameEl.textContent = data.fileName;
+                sizeEl.textContent = `Size: ${formatBytes(data.fileSize)}`;
+                if (data.description && data.description.trim() !== '') { descriptionEl.textContent = data.description; } else { descriptionEl.style.display = 'none'; }
+                if (data.fileType && data.fileType.startsWith('video/')) { const video = document.createElement('video'); video.src = `/api/get-file?file_code=${fileCode}`; video.controls = true; previewEl.innerHTML = ''; previewEl.appendChild(video); }
+                downloadInfo.url = `/api/get-file?file_code=${fileCode}`; downloadInfo.name = data.fileName;
+                downloadBtn.classList.remove('disabled');
+            }).catch(err => { nameEl.textContent = 'Could not load file details.'; console.error(err); });
+            downloadBtn.addEventListener('click', (event) => {
+                event.preventDefault(); if (downloadBtn.classList.contains('disabled')) return;
+                window.showGiga().then(() => { triggerDownload(downloadInfo.url, downloadInfo.name); }).catch(e => { alert('Please watch the ad to start the download.'); });
+            });
+        });
+        function triggerDownload(url, name) { const a = document.createElement('a'); a.href = url; a.download = name || 'download'; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
+        function formatBytes(bytes, decimals = 2) { if (!bytes || bytes === 0) return '0 Bytes'; const k = 1024; const dm = decimals < 0 ? 0 : decimals; const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']; const i = Math.floor(Math.log(bytes) / Math.log(k)); return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]; }
+    </script>
+</body>
+</html>
