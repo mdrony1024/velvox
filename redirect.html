@@ -12,6 +12,7 @@
         .container { max-width: 350px; padding: 20px; }
         h1 { font-size: 1.6em; margin-bottom: 15px; }
         p { color: #8e8e93; }
+        .action-btn { display: block; background-color: #007aff; color: white; border: none; border-radius: 12px; padding: 15px; font-size: 1.1em; font-weight: bold; cursor: pointer; width: 100%; text-decoration: none; margin-top: 25px; }
         .loader {
             border: 4px solid #f3f3f3;
             border-top: 4px solid #3498db;
@@ -28,13 +29,17 @@
     </style>
 </head>
 <body>
-    <div id="view-container"><h1>Loading Link...</h1></div>
+    <div class="container" id="view-container">
+        <h1>Almost there!</h1>
+        <p>Please wait while we prepare your link. You will be redirected shortly.</p>
+        <div class="loader"></div>
+    </div>
 
     <script>
         // --- CONFIGURATION (SET FOR YOU) ---
         const BOT_USERNAME = 'velgrambot';
         const SUPABASE_URL = 'https://mtkqhvquzfgayhibbfih.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10a3FodnF1emZnYXloaWJiZmloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2MDc1NDYsImV4cCI6MjA3MDE4MzU0Nn0.mP_6fE3Y5oHD9D2dx5O-hIce5etJu3PHDs-lhdIK_Oo';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10a3FodnF1emZnYXloaWJiZmloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2MDc1NDYsImV4cCI6MjA3MDE4MzU0Nn0.mP_6fE3Y5oHD9D2dx5O-hIce5etJu3PHDs-lhdIK_Oo'; // আপনার anon key দিন
 
         // --- INITIALIZATION ---
         const { createClient } = supabase;
@@ -51,10 +56,12 @@
             const isVerified = new URLSearchParams(window.location.search).get('verified');
 
             if (data.is_locked && !isVerified) {
+                // যদি লিংক লক করা থাকে, তাহলে লক পেজ দেখানো হবে
                 renderLockView(shortCode);
             } else {
+                // যদি লিংক লক করা না থাকে বা ভেরিফাই হয়ে আসে, তাহলে বিজ্ঞাপন দেখানো হবে
                 await supabaseClient.rpc('increment_clicks', { link_id: data.id });
-                renderAdView(data.long_url);
+                waitForAdAndRedirect(data.long_url);
             }
         };
 
@@ -63,48 +70,35 @@
         
         function renderLockView(shortCode) {
             const botUrl = `https://t.me/${BOT_USERNAME}?start=verify_${shortCode}`;
+            // লোডিং স্ক্রিনের পরিবর্তে লক পেজের কন্টেন্ট দেখানো হচ্ছে
             document.getElementById('view-container').innerHTML = `
                 <h1>🔒 Link Locked</h1>
                 <p>To unlock the link, you need to verify through our bot.</p>
                 <a href="${botUrl}" class="action-btn" style="background-color:#34c759;">Start Verification in Bot</a>
             `;
         }
-
-        function renderAdView(longUrl) {
-            // বিজ্ঞাপন লোড হওয়ার জন্য একটি সুন্দর মেসেজ দেখানো হচ্ছে
-            document.getElementById('view-container').innerHTML = `
-                <h1>Almost there!</h1>
-                <p>Please wait while we prepare your link. You will be redirected shortly.</p>
-                <div class="loader"></div>
-            `;
-            
-            // Gigads বিজ্ঞাপনটি প্রস্তুত হলে স্বয়ংক্রিয়ভাবে চালু করার জন্য ফাংশন কল করা
+        
+        // --- ACTION FUNCTION ---
+        function waitForAdAndRedirect(url) {
             const adCheckInterval = setInterval(() => {
-                // `showGiga` ফাংশনটি লোড হয়েছে কিনা তা চেক করা
                 if (typeof window.showGiga === 'function') {
-                    clearInterval(adCheckInterval); // চেকিং বন্ধ করা
-                    showAdAndRedirect(longUrl); // বিজ্ঞাপন চালু করা
+                    clearInterval(adCheckInterval);
+                    showAdAndRedirect(url);
                 }
-            }, 100); // প্রতি 100 মিলিসেকেন্ডে চেক করবে
+            }, 100);
 
-             // যদি 5 সেকেন্ডের মধ্যে বিজ্ঞাপন লোড না হয়, সরাসরি রিডাইরেক্ট করে দেবে
             setTimeout(() => {
-                // `showGiga` এখনও লোড হয়নি কিনা তা চেক করা
                 if (typeof window.showGiga !== 'function') {
-                    clearInterval(adCheckInterval); // চেকিং বন্ধ করা
-                    window.location.replace(longUrl); // সরাসরি রিডাইরেক্ট করা
+                    clearInterval(adCheckInterval);
+                    window.location.replace(url);
                 }
             }, 5000);
         }
-        
-        // --- ACTION FUNCTION ---
+
         async function showAdAndRedirect(url) {
             try { 
                 await window.showGiga(); 
-            } catch (e) {
-                // যদি বিজ্ঞাপন ব্লক করা থাকে বা কোনো এরর হয়
-            }
-            // বিজ্ঞাপন দেখানো শেষ হলে বা ব্যর্থ হলে আসল লিংকে রিডাইরেক্ট করা
+            } catch (e) { }
             window.location.replace(url);
         }
     </script>
