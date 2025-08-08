@@ -5,14 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Please wait</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Gigads Script (এখানে যোগ করা হয়েছে) -->
+    <!-- Gigads Script -->
     <script src="https://ad.gigapub.tech/script?id=1399" async></script>
     <style>
         body { font-family: -apple-system, sans-serif; background-color: #1c1c1e; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; text-align: center; }
         .container { max-width: 350px; padding: 20px; }
         h1 { font-size: 1.6em; margin-bottom: 15px; }
         p { color: #8e8e93; }
-        .action-btn { display: block; background-color: #007aff; color: white; border: none; border-radius: 12px; padding: 15px; font-size: 1.1em; font-weight: bold; cursor: pointer; width: 100%; text-decoration: none; margin-top: 25px; }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -36,14 +48,11 @@
             const { data, error } = await supabaseClient.from('links').select('*').eq('short_code', shortCode).single();
             if (error || !data) return renderError();
 
-            // ভেরিফিকেশন সফল হওয়ার পর, বট থেকে যে ইউজার ফিরে আসবে, তার জন্য একটি বিশেষ প্যারামিটার চেক করা
             const isVerified = new URLSearchParams(window.location.search).get('verified');
 
             if (data.is_locked && !isVerified) {
-                // যদি লিংক লক করা থাকে এবং ইউজার ভেরিফাই না হয়ে আসে
                 renderLockView(shortCode);
             } else {
-                // যদি লিংক লক করা না থাকে, অথবা ইউজার ভেরিফাই হয়ে ফিরে আসে
                 await supabaseClient.rpc('increment_clicks', { link_id: data.id });
                 renderAdView(data.long_url);
             }
@@ -52,12 +61,6 @@
         // --- VIEW RENDERING FUNCTIONS ---
         function renderError() { document.getElementById('view-container').innerHTML = `<h1>Error: Link not found.</h1>`; }
         
-        function renderAdView(longUrl) {
-            document.getElementById('view-container').innerHTML = `<h1>Your link is almost ready!</h1><p>Please wait while we prepare your link...</p>`;
-            // বিজ্ঞাপন দেখানো এবং রিডাইরেক্ট করার জন্য ফাংশন কল করা
-            showAdAndRedirect(longUrl);
-        }
-        
         function renderLockView(shortCode) {
             const botUrl = `https://t.me/${BOT_USERNAME}?start=verify_${shortCode}`;
             document.getElementById('view-container').innerHTML = `
@@ -65,6 +68,33 @@
                 <p>To unlock the link, you need to verify through our bot.</p>
                 <a href="${botUrl}" class="action-btn" style="background-color:#34c759;">Start Verification in Bot</a>
             `;
+        }
+
+        function renderAdView(longUrl) {
+            // বিজ্ঞাপন লোড হওয়ার জন্য একটি সুন্দর মেসেজ দেখানো হচ্ছে
+            document.getElementById('view-container').innerHTML = `
+                <h1>Almost there!</h1>
+                <p>Please wait while we prepare your link. You will be redirected shortly.</p>
+                <div class="loader"></div>
+            `;
+            
+            // Gigads বিজ্ঞাপনটি প্রস্তুত হলে স্বয়ংক্রিয়ভাবে চালু করার জন্য ফাংশন কল করা
+            const adCheckInterval = setInterval(() => {
+                // `showGiga` ফাংশনটি লোড হয়েছে কিনা তা চেক করা
+                if (typeof window.showGiga === 'function') {
+                    clearInterval(adCheckInterval); // চেকিং বন্ধ করা
+                    showAdAndRedirect(longUrl); // বিজ্ঞাপন চালু করা
+                }
+            }, 100); // প্রতি 100 মিলিসেকেন্ডে চেক করবে
+
+             // যদি 5 সেকেন্ডের মধ্যে বিজ্ঞাপন লোড না হয়, সরাসরি রিডাইরেক্ট করে দেবে
+            setTimeout(() => {
+                // `showGiga` এখনও লোড হয়নি কিনা তা চেক করা
+                if (typeof window.showGiga !== 'function') {
+                    clearInterval(adCheckInterval); // চেকিং বন্ধ করা
+                    window.location.replace(longUrl); // সরাসরি রিডাইরেক্ট করা
+                }
+            }, 5000);
         }
         
         // --- ACTION FUNCTION ---
