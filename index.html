@@ -1,26 +1,204 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- The head section remains the same as provided before -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Velgram Dashboard</title>
+    
+    <!-- Telegram Web App Script -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <!-- Supabase JS Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>/* The CSS code remains the same */</style>
+    
+    <style>
+        :root {
+            --tg-theme-bg-color: #18222d;
+            --tg-theme-text-color: #ffffff;
+            --tg-theme-button-color: #2ea6ff;
+            --tg-theme-button-text-color: #ffffff;
+            --tg-theme-secondary-bg-color: #232e3c;
+            --tg-theme-hint-color: #aab8c5;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--tg-theme-bg-color);
+            color: var(--tg-theme-text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container { width: 100%; max-width: 600px; }
+        .card { background-color: var(--tg-theme-secondary-bg-color); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        #user-greeting { margin: 0 0 20px 0; font-size: 1.4em; font-weight: 600; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; text-align: center; }
+        .stat h3 { margin: 0 0 5px 0; font-size: 1.8em; color: var(--tg-theme-button-color); }
+        .stat p { margin: 0; color: var(--tg-theme-hint-color); font-size: 0.9em; }
+        input[type="url"], input[type="text"] { width: 100%; padding: 14px; border: 1px solid #444; background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); border-radius: 8px; font-size: 1em; box-sizing: border-box; margin-bottom: 15px; }
+        button { width: 100%; padding: 14px; background-color: var(--tg-theme-button-color); color: var(--tg-theme-button-text-color); border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer; transition: background-color 0.2s; }
+        button:active { filter: brightness(0.9); }
+        .api-key-actions button { background-color: #3e4a59; font-size: 0.9em; padding: 10px; margin-top: 10px; }
+        .result-box { margin-top: 20px; display: none; }
+    </style>
 </head>
 <body>
-    <!-- The body HTML remains the same as provided before -->
+
+    <div class="container">
+        <!-- Profile & Stats Card -->
+        <div class="card">
+            <h2 id="user-greeting">Loading...</h2>
+            <div class="stats-grid">
+                <div class="stat"><h3 id="total-links">0</h3><p>Total Links</p></div>
+                <div class="stat"><h3 id="total-clicks">0</h3><p>Total Clicks</p></div>
+            </div>
+        </div>
+
+        <!-- Shortener Card -->
+        <div class="card">
+            <input type="url" id="url-input" placeholder="Paste your long link here...">
+            <button onclick="shortenLink()">⚡ Shorten Link</button>
+            <div class="result-box" id="result-box">
+                <p style="text-align:center; color: var(--tg-theme-hint-color);">Your short link:</p>
+                <input type="text" id="short-link-output" readonly>
+                <button onclick="copyValue('short-link-output')">📋 Copy Link</button>
+            </div>
+        </div>
+        
+        <!-- API Card -->
+        <div class="card">
+            <h3>Developer API</h3>
+            <p style="font-size:0.9em; color: var(--tg-theme-hint-color);">Use this API Key to shorten links programmatically.</p>
+            <input type="text" id="api-key-output" value="Loading your API key..." readonly>
+            <div class="api-key-actions">
+                <button onclick="copyValue('api-key-output')">📋 Copy Key</button>
+                <button onclick="regenerateApiKey()">🔄 Regenerate Key</button>
+            </div>
+        </div>
+    </div>
 
     <script>
-        // --- CONFIGURATION (UPDATED FOR YOU) ---
+        // --- CONFIGURATION ---
         const VERCEL_APP_URL = "https://velgram.vercel.app";
         const SUPABASE_URL = 'https://mtkqhvquzfgayhibbfih.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10a3FodnF1emZnYXloaWJiZmloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2MDc1NDYsImV4cCI6MjA3MDE4MzU0Nn0.mP_6fE3Y5oHD9D2dx5O-hIce5etJu3PHDs-lhdIK_Oo';
         
-        // --- The rest of the Javascript code remains the same ---
+        // --- INITIALIZATION ---
         const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        // ... all other functions ...
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        let currentUser = null;
+
+        // --- CORE FUNCTIONS ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!tg.initDataUnsafe.user) {
+                tg.showAlert('User data not found. Please open this app through the Telegram bot.');
+                document.getElementById('user-greeting').innerText = "Error: Invalid User";
+                return;
+            }
+            currentUser = tg.initDataUnsafe.user;
+            document.getElementById('user-greeting').innerText = `Welcome, ${currentUser.first_name}!`;
+            
+            await upsertUserProfile();
+            await loadUserStats();
+            await loadApiKey();
+        });
+
+        async function upsertUserProfile() {
+            const { error } = await supabase
+                .from('profiles')
+                .upsert({ id: currentUser.id, first_name: currentUser.first_name }, { onConflict: 'id' });
+
+            if (error) console.error('Error updating profile:', error.message);
+        }
+
+        async function loadUserStats() {
+            const { data, error, count } = await supabase
+                .from('links')
+                .select('clicks', { count: 'exact' })
+                .eq('user_id', currentUser.id);
+            
+            if (error) {
+                console.error('Error fetching stats:', error.message);
+                return;
+            }
+            
+            document.getElementById('total-links').innerText = count;
+            const totalClicks = data.reduce((sum, link) => sum + link.clicks, 0);
+            document.getElementById('total-clicks').innerText = totalClicks;
+        }
+        
+        async function shortenLink() {
+            const longUrl = document.getElementById('url-input').value;
+            if (!longUrl || !longUrl.startsWith('http')) {
+                tg.showAlert('Please enter a valid URL (starting with http:// or https://).');
+                return;
+            }
+
+            tg.MainButton.setText('Processing...').showProgress();
+            
+            const short_code = Math.random().toString(36).substring(2, 8); 
+
+            const { error } = await supabase.from('links').insert({
+                user_id: currentUser.id,
+                long_url: longUrl,
+                short_code: short_code
+            });
+
+            tg.MainButton.hideProgress().setText(''); 
+
+            if (error) {
+                tg.showAlert(`Error: Could not create link. Please try again. (${error.message})`);
+                return;
+            }
+
+            const shortUrl = `${VERCEL_APP_URL}/redirect.html?c=${short_code}`;
+            document.getElementById('short-link-output').value = shortUrl;
+            document.getElementById('result-box').style.display = 'block';
+            
+            await loadUserStats();
+            document.getElementById('url-input').value = "";
+        }
+        
+        async function loadApiKey() {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('api_key')
+                .eq('id', currentUser.id)
+                .single();
+
+            if (data && data.api_key) {
+                document.getElementById('api-key-output').value = data.api_key;
+            } else {
+                console.error('Could not load API key:', error?.message);
+                document.getElementById('api-key-output').value = 'Error loading key.';
+            }
+        }
+
+        async function regenerateApiKey() {
+            tg.showConfirm("Are you sure you want to generate a new API key? Your old key will stop working immediately.", async (confirmed) => {
+                if (confirmed) {
+                    const { error } = await supabase.rpc('regenerate_api_key_for_user', { user_id_param: currentUser.id });
+                    if (error) {
+                        tg.showAlert(`Error: Could not regenerate key. ${error.message}`);
+                    } else {
+                        await loadApiKey();
+                        tg.showAlert('A new API Key has been successfully generated!');
+                    }
+                }
+            });
+        }
+        
+        function copyValue(elementId) {
+            const inputElement = document.getElementById(elementId);
+            navigator.clipboard.writeText(inputElement.value).then(() => {
+                tg.HapticFeedback.notificationOccurred('success');
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+            });
+        }
     </script>
 </body>
 </html>
