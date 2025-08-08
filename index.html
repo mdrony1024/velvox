@@ -11,7 +11,7 @@
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); margin: 0; padding: 20px; }
         .container { width: 100%; max-width: 600px; margin: auto; }
         .card { background-color: var(--tg-theme-secondary-bg-color); border-radius: 12px; padding: 20px; }
-        h2 { text-align: center; margin-top: 0; }
+        h2 { text-align: center; margin-top: 0; margin-bottom: 25px; }
         input[type="url"], input[type="text"] { width: 100%; padding: 14px; border: 1px solid #444; background-color: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); border-radius: 8px; font-size: 1em; box-sizing: border-box; margin-bottom: 15px; }
         button { width: 100%; padding: 14px; background-color: var(--tg-theme-button-color); color: #fff; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer; }
         .toggle-switch { display: flex; align-items: center; justify-content: space-between; margin-top: 20px; padding: 15px; background-color: #3e4a59; border-radius: 8px; }
@@ -48,7 +48,6 @@
     </div>
 
     <script>
-        // --- CONFIGURATION ---
         const VERCEL_APP_URL = "https://velgram.vercel.app"; 
         const SUPABASE_URL = 'https://mtkqhvquzfgayhibbfih.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10a3FodnF1emZnYXloaWJiZmloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2MDc1NDYsImV4cCI6MjA3MDE4MzU0Nn0.mP_6fE3Y5oHD9D2dx5O-hIce5etJu3PHDs-lhdIK_Oo';
@@ -78,7 +77,6 @@
             const short_code = Math.random().toString(36).substring(2, 8);
             
             const { error } = await supabase.from('links').insert({
-                // user_id এখন আর পাঠানো হচ্ছে না
                 long_url: longUrl,
                 short_code: short_code,
                 is_locked: isLocked,
