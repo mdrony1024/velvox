@@ -29,7 +29,7 @@
         <div class="card">
             <h2>Velgram Link Shortener</h2>
             <input type="url" id="url-input" placeholder="Paste your long link here...">
-            <button onclick="shortenLink()">⚡ Shorten Link</button>
+            <button id="shorten-btn" onclick="shortenLink()">⚡ Shorten Link</button>
             <div class="toggle-switch">
                 <span>🔗 Link Lock (Force Join)</span>
                 <label class="switch">
@@ -67,20 +67,24 @@
         }
 
         async function shortenLink() {
+            const shortenButton = document.getElementById('shorten-btn');
+            shortenButton.disabled = true;
+            shortenButton.innerText = 'Processing...';
+
             try {
                 const longUrl = document.getElementById('url-input').value;
                 if (!longUrl) {
-                    return tg.showAlert('Please enter a URL.');
+                    tg.showAlert('Please enter a URL.');
+                    return;
                 }
 
                 const isLocked = document.getElementById('lock-toggle').checked;
                 const lockChannel = document.getElementById('channel-input').value;
 
                 if (isLocked && (!lockChannel || !lockChannel.startsWith('@'))) {
-                    return tg.showAlert("Please enter a valid channel username starting with @.");
+                    tg.showAlert("Please enter a valid channel username starting with @.");
+                    return;
                 }
-                
-                tg.MainButton.setText('Processing...').showProgress();
                 
                 const short_code = Math.random().toString(36).substring(2, 8);
                 
@@ -92,11 +96,10 @@
                 };
 
                 const { error } = await supabaseClient.from('links').insert(linkData);
-                
-                tg.MainButton.hideProgress().setText('');
 
                 if (error) {
-                    return tg.showAlert(`Database Error: ${error.message}`);
+                    tg.showAlert(`Database Error: ${error.message}`);
+                    return;
                 }
 
                 document.getElementById('short-link-output').value = `${VERCEL_APP_URL}/redirect.html?c=${short_code}`;
@@ -104,6 +107,10 @@
 
             } catch (e) {
                 tg.showAlert(`An unexpected error occurred: ${e.message}`);
+            } finally {
+                // কাজ শেষ হলে বা এরর হলে, বাটনটি আবার আগের অবস্থায় ফিরিয়ে আনা হবে
+                shortenButton.disabled = false;
+                shortenButton.innerHTML = '⚡ Shorten Link';
             }
         }
     </script>
