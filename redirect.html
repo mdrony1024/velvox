@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Please wait</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Gigads Script (এখানে যোগ করা হয়েছে) -->
+    <script src="https://ad.gigapub.tech/script?id=1399" async></script>
     <style>
         body { font-family: -apple-system, sans-serif; background-color: #1c1c1e; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; text-align: center; }
         .container { max-width: 350px; padding: 20px; }
@@ -34,9 +36,14 @@
             const { data, error } = await supabaseClient.from('links').select('*').eq('short_code', shortCode).single();
             if (error || !data) return renderError();
 
-            if (data.is_locked && data.lock_channel) {
+            // ভেরিফিকেশন সফল হওয়ার পর, বট থেকে যে ইউজার ফিরে আসবে, তার জন্য একটি বিশেষ প্যারামিটার চেক করা
+            const isVerified = new URLSearchParams(window.location.search).get('verified');
+
+            if (data.is_locked && !isVerified) {
+                // যদি লিংক লক করা থাকে এবং ইউজার ভেরিফাই না হয়ে আসে
                 renderLockView(shortCode);
             } else {
+                // যদি লিংক লক করা না থাকে, অথবা ইউজার ভেরিফাই হয়ে ফিরে আসে
                 await supabaseClient.rpc('increment_clicks', { link_id: data.id });
                 renderAdView(data.long_url);
             }
@@ -46,7 +53,9 @@
         function renderError() { document.getElementById('view-container').innerHTML = `<h1>Error: Link not found.</h1>`; }
         
         function renderAdView(longUrl) {
-            document.getElementById('view-container').innerHTML = `<h1>Your link is almost ready!</h1><button class="action-btn" onclick="showAdAndRedirect('${longUrl}')">Click to Open</button>`;
+            document.getElementById('view-container').innerHTML = `<h1>Your link is almost ready!</h1><p>Please wait while we prepare your link...</p>`;
+            // বিজ্ঞাপন দেখানো এবং রিডাইরেক্ট করার জন্য ফাংশন কল করা
+            showAdAndRedirect(longUrl);
         }
         
         function renderLockView(shortCode) {
@@ -61,10 +70,11 @@
         // --- ACTION FUNCTION ---
         async function showAdAndRedirect(url) {
             try { 
-                // This function is only for non-locked links now
-                // Gigads script can be added here if needed
-                // await window.showGiga(); 
-            } catch (e) {}
+                await window.showGiga(); 
+            } catch (e) {
+                // যদি বিজ্ঞাপন ব্লক করা থাকে বা কোনো এরর হয়
+            }
+            // বিজ্ঞাপন দেখানো শেষ হলে বা ব্যর্থ হলে আসল লিংকে রিডাইরেক্ট করা
             window.location.replace(url);
         }
     </script>
