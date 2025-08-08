@@ -48,9 +48,10 @@
     </div>
 
     <script>
+        // --- CONFIGURATION ---
         const VERCEL_APP_URL = "https://velgram.vercel.app"; 
         const SUPABASE_URL = 'https://mtkqhvquzfgayhibbfih.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10a3FodnF1emZnYXloaWJiZmloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2MDc1NDYsImV4cCI6MjA3MDE4MzU0Nn0.mP_6fE3Y5oHD9D2dx5O-hIce5etJu3PHDs-lhdIK_Oo';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI currentUser = tg.initDataUnsafe.user;1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10a3FodnF1emZnYXloaWJiZmloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2MDc1NDYsImV4cCI6MjA3MDE4MzU0Nn0.mP_6fE3Y5oHD9D2dx5O-hIce5etJu3PHDs-lhdIK_Oo';
         
         const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const tg = window.Telegram.WebApp;
@@ -62,33 +63,54 @@
         }
 
         async function shortenLink() {
-            const longUrl = document.getElementById('url-input').value;
-            if (!longUrl) return tg.showAlert('Please enter a URL.');
+            try {
+                const longUrl = document.getElementById('url-input').value;
+                if (!longUrl) {
+                    tg.showAlert('Please enter a URL.');
+                    return;
+                }
 
-            const isLocked = document.getElementById('lock-toggle').checked;
-            const lockChannel = document.getElementById('channel-input').value;
+                const isLocked = document.getElementById('lock-toggle').checked;
+                const lockChannel = document.getElementById('channel-input').value;
 
-            if (isLocked && (!lockChannel || !lockChannel.startsWith('@'))) {
-                return tg.showAlert("Please enter a valid channel username starting with @.");
+                if (isLocked && (!lockChannel || !lockChannel.startsWith('@'))) {
+                    tg.showAlert("Please enter a valid channel username starting with @.");
+                    return;
+                }
+                
+                tg.MainButton.setText('Processing...').showProgress();
+                
+                const short_code = Math.random().toString(36).substring(2, 8);
+                
+                // ডেটাবেসে পাঠানোর জন্য অবজেক্ট তৈরি
+                const linkData = {
+                    long_url: longUrl,
+                    short_code: short_code,
+                    is_locked: isLocked,
+                    lock_channel: isLocked ? lockChannel : null
+                };
+
+                // ডেটাবেসে INSERT করার চেষ্টা
+                const { error } = await supabase.from('links').insert(linkData);
+                
+                tg.MainButton.hideProgress().setText('');
+
+                // যদি কোনো এরর থাকে, সেটি অ্যালার্ট হিসেবে দেখানো হবে
+                if (error) {
+                    // *** এই অ্যালার্টটিই আমাদের বলবে আসল সমস্যা কী ***
+                    alert(`Database Error: ${error.message}\nDetails: ${JSON.stringify(error, null, 2)}`);
+                    tg.showAlert(`Database Error: ${error.message}`);
+                    return;
+                }
+
+                // সফল হলে শর্ট লিংক দেখানো হবে
+                document.getElementById('short-link-output').value = `${VERCEL_APP_URL}/redirect.html?c=${short_code}`;
+                document.getElementById('result-box').style.display = 'block';
+
+            } catch (e) {
+                // যদি অন্য কোনো অপ্রত্যাশিত জাভাস্ক্রিপ্ট এরর হয়
+                alert(`An unexpected error occurred: ${e.message}`);
             }
-            
-            tg.MainButton.setText('Processing...').showProgress();
-            
-            const short_code = Math.random().toString(36).substring(2, 8);
-            
-            const { error } = await supabase.from('links').insert({
-                long_url: longUrl,
-                short_code: short_code,
-                is_locked: isLocked,
-                lock_channel: isLocked ? lockChannel : null
-            });
-
-            tg.MainButton.hideProgress().setText('');
-
-            if (error) return tg.showAlert(`Error: ${error.message}`);
-
-            document.getElementById('short-link-output').value = `${VERCEL_APP_URL}/redirect.html?c=${short_code}`;
-            document.getElementById('result-box').style.display = 'block';
         }
     </script>
 </body>
