@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Please wait</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://ad.gigapub.tech/script?id=1399" async></script>
     <style>
         body { font-family: -apple-system, sans-serif; background-color: #1c1c1e; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; text-align: center; }
         .container { max-width: 350px; padding: 20px; }
@@ -19,16 +18,13 @@
 
     <script>
         // --- CONFIGURATION (SET FOR YOU) ---
+        const BOT_USERNAME = 'velgrambot';
         const SUPABASE_URL = 'https://mtkqhvquzfgayhibbfih.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10a3FodnF1emZnYXloaWJiZmloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2MDc1NDYsImV4cCI6MjA3MDE4MzU0Nn0.mP_6fE3Y5oHD9D2dx5O-hIce5etJu3PHDs-lhdIK_Oo';
-        const BOT_USERNAME = 'velgrambot'; // Your bot's username
 
         // --- INITIALIZATION ---
         const { createClient } = supabase;
         const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
-        
-        let destinationUrl = null;
-        let lockChannel = null;
 
         // --- CORE LOGIC ---
         window.onload = async () => {
@@ -38,64 +34,38 @@
             const { data, error } = await supabaseClient.from('links').select('*').eq('short_code', shortCode).single();
             if (error || !data) return renderError();
 
-            destinationUrl = data.long_url;
-            lockChannel = data.lock_channel;
-
             if (data.is_locked && data.lock_channel) {
-                renderLockView(data.lock_channel);
+                renderLockView(shortCode);
             } else {
                 await supabaseClient.rpc('increment_clicks', { link_id: data.id });
-                renderAdView();
+                renderAdView(data.long_url);
             }
         };
-        
-        // --- TELEGRAM LOGIN CALLBACK ---
-        async function onTelegramAuth(user) {
-            await verifyMembership(user.id, lockChannel);
-        }
 
         // --- VIEW RENDERING FUNCTIONS ---
         function renderError() { document.getElementById('view-container').innerHTML = `<h1>Error: Link not found.</h1>`; }
-        function renderAdView() { document.getElementById('view-container').innerHTML = `<h1>Your link is almost ready!</h1><button class="action-btn" onclick="showAdAndRedirect()">Click to Open</button>`; }
         
-        function renderLockView(channel) {
-            const view = `
+        function renderAdView(longUrl) {
+            document.getElementById('view-container').innerHTML = `<h1>Your link is almost ready!</h1><button class="action-btn" onclick="showAdAndRedirect('${longUrl}')">Click to Open</button>`;
+        }
+        
+        function renderLockView(shortCode) {
+            const botUrl = `https://t.me/${BOT_USERNAME}?start=verify_${shortCode}`;
+            document.getElementById('view-container').innerHTML = `
                 <h1>🔒 Link Locked</h1>
-                <p>To continue, please log in with Telegram and verify that you've joined the channel.</p>
-                <a href="https://t.me/${channel.substring(1)}" target="_blank" class="action-btn">1. Join Channel</a>
-                <div style="margin-top: 20px;" id="telegram-login-widget"></div>
+                <p>To unlock the link, you need to verify through our bot.</p>
+                <a href="${botUrl}" class="action-btn" style="background-color:#34c759;">Start Verification in Bot</a>
             `;
-            document.getElementById('view-container').innerHTML = view;
-            
-            // Dynamically create and load the Telegram widget script
-            const script = document.createElement('script');
-            script.src = "https://telegram.org/js/telegram-widget.js?22";
-            script.setAttribute('data-telegram-login', BOT_USERNAME);
-            script.setAttribute('data-size', 'large');
-            script.setAttribute('data-onauth', 'onTelegramAuth(user)');
-            script.setAttribute('data-request-access', 'write');
-            document.getElementById('telegram-login-widget').appendChild(script);
-        }
-
-        // --- ACTION FUNCTIONS ---
-        async function verifyMembership(userId, channel) {
-            const response = await fetch('/api/verify', { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ userId: userId, channel: channel }) 
-            });
-            const result = await response.json();
-            if (result.isMember) {
-                await showAdAndRedirect();
-            } else {
-                alert("Verification Failed. Please make sure you have joined the channel and then log in again.");
-            }
         }
         
-        async function showAdAndRedirect() {
-            if (!destinationUrl) return;
-            try { await window.showGiga(); } catch (e) {}
-            window.location.replace(destinationUrl);
+        // --- ACTION FUNCTION ---
+        async function showAdAndRedirect(url) {
+            try { 
+                // This function is only for non-locked links now
+                // Gigads script can be added here if needed
+                // await window.showGiga(); 
+            } catch (e) {}
+            window.location.replace(url);
         }
     </script>
 </body>
