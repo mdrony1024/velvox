@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Please wait</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://ad.gigapub.tech/script?id=1399" async></script>
+    <!-- আপনার নতুন বিজ্ঞাপন আইডি -->
+    <script src="https://ad.gigapub.tech/script?id=1464" async></script>
     <style>
         body { font-family: -apple-system, sans-serif; background-color: #1c1c1e; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; text-align: center; }
         .container { max-width: 350px; padding: 20px; }
@@ -32,20 +33,25 @@
         const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 
         window.onload = async () => {
-            const shortCode = new URLSearchParams(window.location.search).get('c');
-            if (!shortCode) return renderError();
+            try {
+                const shortCode = new URLSearchParams(window.location.search).get('c');
+                if (!shortCode) return renderError();
 
-            const { data, error } = await supabaseClient.from('links').select('*').eq('short_code', shortCode).single();
-            if (error || !data) return renderError();
+                const { data, error } = await supabaseClient.from('links').select('*').eq('short_code', shortCode).single();
+                
+                if (error || !data) return renderError();
 
-            if (data.is_locked && data.lock_channel) {
-                renderLockView(data.long_url, data.lock_channel);
-            } else {
-                renderAdView(data.long_url);
+                if (data.is_locked && data.lock_channel) {
+                    renderLockView(data.long_url, data.lock_channel);
+                } else {
+                    renderAdView(data.long_url);
+                }
+            } catch (e) {
+                renderError();
             }
         };
 
-        function renderError() { document.getElementById('view-container').innerHTML = `<h1>Error: Link not found.</h1>`; }
+        function renderError() { document.getElementById('view-container').innerHTML = `<h1>Error: Link not found or invalid.</h1>`; }
 
         function renderLockView(longUrl, channelName) {
             const channelLink = `https://t.me/${channelName.substring(1)}`;
@@ -78,7 +84,7 @@
             }, 100);
 
             setTimeout(() => {
-                if (typeof window.showG- !== 'function') {
+                if (typeof window.showGiga !== 'function') {
                     clearInterval(adCheckInterval);
                     window.location.replace(longUrl);
                 }
