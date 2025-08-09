@@ -48,12 +48,10 @@
     </div>
 
     <script>
-        // --- CONFIGURATION (SET FOR YOU) ---
-        const VERCEL_APP_URL = "https://velvox.vercel.app"; 
+        const BOT_USERNAME = 'velvoxbot';
         const SUPABASE_URL = 'https://mtkqhvquzfgayhibbfih.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10a3FodnF1emZnYXloaWJiZmloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2MDc1NDYsImV4cCI6MjA3MDE4MzU0Nn0.mP_6fE3Y5oHD9D2dx5O-hIce5etJu3PHDs-lhdIK_Oo'; // আপনার anon key দিন
         
-        // --- INITIALIZATION ---
         const tg = window.Telegram.WebApp;
         const { createClient } = supabase;
         const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -61,7 +59,6 @@
         tg.ready();
         tg.expand();
 
-        // --- FUNCTIONS ---
         function toggleLockOptions() {
             document.getElementById('lock-options').style.display = document.getElementById('lock-toggle').checked ? 'block' : 'none';
         }
@@ -69,35 +66,26 @@
         async function shortenLink() {
             try {
                 const longUrl = document.getElementById('url-input').value;
-                if (!longUrl) {
-                    return tg.showAlert('Please enter a URL.');
-                }
+                if (!longUrl) return tg.showAlert('Please enter a URL.');
 
                 const isLocked = document.getElementById('lock-toggle').checked;
                 const lockChannel = document.getElementById('channel-input').value;
-
                 if (isLocked && (!lockChannel || !lockChannel.startsWith('@'))) {
                     return tg.showAlert("Please enter a valid channel username starting with @.");
                 }
                 
                 const short_code = Math.random().toString(36).substring(2, 8);
-                
-                const linkData = {
+                const { error } = await supabaseClient.from('links').insert({
                     long_url: longUrl,
                     short_code: short_code,
                     is_locked: isLocked,
                     lock_channel: isLocked ? lockChannel : null
-                };
+                });
 
-                const { error } = await supabaseClient.from('links').insert(linkData);
-                
-                if (error) {
-                    return tg.showAlert(`Database Error: ${error.message}`);
-                }
+                if (error) return tg.showAlert(`Database Error: ${error.message}`);
 
-                document.getElementById('short-link-output').value = `${VERCEL_APP_URL}/redirect.html?c=${short_code}`;
+                document.getElementById('short-link-output').value = `https://t.me/${BOT_USERNAME}?start=${short_code}`;
                 document.getElementById('result-box').style.display = 'block';
-
             } catch (e) {
                 tg.showAlert(`An unexpected error occurred: ${e.message}`);
             }
