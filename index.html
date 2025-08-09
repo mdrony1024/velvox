@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Velgram Shortener</title>
+    <title>Velvox Shortener</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -27,9 +27,9 @@
 <body>
     <div class="container">
         <div class="card">
-            <h2>Velgram Link Shortener</h2>
+            <h2>Velvox Link Shortener</h2>
             <input type="url" id="url-input" placeholder="Paste your long link here...">
-            <button id="shorten-btn" onclick="shortenLink()">⚡ Shorten Link</button>
+            <button onclick="shortenLink()">⚡ Shorten Link</button>
             <div class="toggle-switch">
                 <span>🔗 Link Lock (Force Join)</span>
                 <label class="switch">
@@ -48,10 +48,10 @@
     </div>
 
     <script>
-        // --- CONFIGURATION ---
-        const VERCEL_APP_URL = "https://velgram.vercel.app"; 
+        // --- CONFIGURATION (SET FOR YOU) ---
+        const VERCEL_APP_URL = "https://velvox.vercel.app"; 
         const SUPABASE_URL = 'https://mtkqhvquzfgayhibbfih.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10a3FodnF1emZnYXloaWJiZmloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2MDc1NDYsImV4cCI6MjA3MDE4MzU0Nn0.mP_6fE3Y5oHD9D2dx5O-hIce5etJu3PHDs-lhdIK_Oo';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10a3FodnF1emZnYXloaWJiZmloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2MDc1NDYsImV4cCI6MjA3MDE4MzU0Nn0.mP_6fE3Y5oHD9D2dx5O-hIce5etJu3PHDs-lhdIK_Oo'; // আপনার anon key দিন
         
         // --- INITIALIZATION ---
         const tg = window.Telegram.WebApp;
@@ -67,23 +67,17 @@
         }
 
         async function shortenLink() {
-            const shortenButton = document.getElementById('shorten-btn');
-            shortenButton.disabled = true;
-            shortenButton.innerText = 'Processing...';
-
             try {
                 const longUrl = document.getElementById('url-input').value;
                 if (!longUrl) {
-                    tg.showAlert('Please enter a URL.');
-                    return;
+                    return tg.showAlert('Please enter a URL.');
                 }
 
                 const isLocked = document.getElementById('lock-toggle').checked;
                 const lockChannel = document.getElementById('channel-input').value;
 
                 if (isLocked && (!lockChannel || !lockChannel.startsWith('@'))) {
-                    tg.showAlert("Please enter a valid channel username starting with @.");
-                    return;
+                    return tg.showAlert("Please enter a valid channel username starting with @.");
                 }
                 
                 const short_code = Math.random().toString(36).substring(2, 8);
@@ -96,10 +90,9 @@
                 };
 
                 const { error } = await supabaseClient.from('links').insert(linkData);
-
+                
                 if (error) {
-                    tg.showAlert(`Database Error: ${error.message}`);
-                    return;
+                    return tg.showAlert(`Database Error: ${error.message}`);
                 }
 
                 document.getElementById('short-link-output').value = `${VERCEL_APP_URL}/redirect.html?c=${short_code}`;
@@ -107,10 +100,6 @@
 
             } catch (e) {
                 tg.showAlert(`An unexpected error occurred: ${e.message}`);
-            } finally {
-                // কাজ শেষ হলে বা এরর হলে, বাটনটি আবার আগের অবস্থায় ফিরিয়ে আনা হবে
-                shortenButton.disabled = false;
-                shortenButton.innerHTML = '⚡ Shorten Link';
             }
         }
     </script>
