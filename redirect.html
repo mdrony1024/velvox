@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Please wait</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Gigads Script -->
     <script src="https://ad.gigapub.tech/script?id=1399" async></script>
     <style>
         body { font-family: -apple-system, sans-serif; background-color: #1c1c1e; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; text-align: center; }
@@ -13,19 +12,8 @@
         h1 { font-size: 1.6em; margin-bottom: 15px; }
         p { color: #8e8e93; }
         .action-btn { display: block; background-color: #007aff; color: white; border: none; border-radius: 12px; padding: 15px; font-size: 1.1em; font-weight: bold; cursor: pointer; width: 100%; text-decoration: none; margin-top: 25px; }
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -33,7 +21,7 @@
 
     <script>
         // --- CONFIGURATION (SET FOR YOU) ---
-        const BOT_USERNAME = 'velgrambot';
+        const BOT_USERNAME = 'velvoxbot';
         const SUPABASE_URL = 'https://mtkqhvquzfgayhibbfih.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10a3FodnF1emZnYXloaWJiZmloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2MDc1NDYsImV4cCI6MjA3MDE4MzU0Nn0.mP_6fE3Y5oHD9D2dx5O-hIce5etJu3PHDs-lhdIK_Oo'; // আপনার anon key দিন
 
@@ -72,14 +60,12 @@
         }
 
         function renderAdView(longUrl) {
-            // বিজ্ঞাপন লোড হওয়ার জন্য একটি সুন্দর মেসেজ দেখানো হচ্ছে
             document.getElementById('view-container').innerHTML = `
                 <h1>Almost there!</h1>
                 <p>Please wait while we prepare your link. You will be redirected shortly.</p>
                 <div class="loader"></div>
             `;
             
-            // Gigads বিজ্ঞাপনটি প্রস্তুত হলে স্বয়ংক্রিয়ভাবে চালু করার জন্য ফাংশন কল করা
             const adCheckInterval = setInterval(() => {
                 if (typeof window.showGiga === 'function') {
                     clearInterval(adCheckInterval);
@@ -87,7 +73,6 @@
                 }
             }, 100);
 
-             // যদি 5 সেকেন্ডের মধ্যে বিজ্ঞাপন লোড না হয়, সরাসরি রিডাইরেক্ট করে দেবে
             setTimeout(() => {
                 if (typeof window.showGiga !== 'function') {
                     clearInterval(adCheckInterval);
@@ -98,11 +83,7 @@
         
         // --- ACTION FUNCTION ---
         async function showAdAndRedirect(url) {
-            try { 
-                await window.showGiga(); 
-            } catch (e) {
-                // যদি বিজ্ঞাপন ব্লক করা থাকে বা কোনো এরর হয়
-            }
+            try { await window.showGiga(); } catch (e) {}
             window.location.replace(url);
         }
     </script>
