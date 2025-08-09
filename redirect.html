@@ -11,37 +11,65 @@
         .container { max-width: 350px; padding: 20px; }
         h1 { font-size: 1.6em; margin-bottom: 15px; }
         p { color: #8e8e93; }
+        .action-btn { display: block; background-color: #007aff; color: white; border: none; border-radius: 12px; padding: 15px; font-size: 1.1em; font-weight: bold; cursor: pointer; width: 100%; text-decoration: none; margin-top: 15px; }
+        .task { display: flex; align-items: center; justify-content: space-between; background-color: #2c2c2e; padding: 15px; border-radius: 10px; margin-bottom: 10px; }
+        .task-info { text-align: left; }
+        .task-info span { font-weight: 600; }
+        .task-info p { margin: 2px 0 0; font-size: 0.9em; }
+        .task-status { font-size: 1.5em; color: white; text-decoration: none; }
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-    <div id="view-container"><h1>Verifying your access...</h1><div class="loader"></div></div>
+    <div id="view-container"><h1>Loading Link...</h1></div>
 
     <script>
         const SUPABASE_URL = 'https://mtkqhvquzfgayhibbfih.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10a3FodnF1emZnYXloaWJiZmloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2MDc1NDYsImV4cCI6MjA3MDE4MzU0Nn0.mP_6fE3Y5oHD9D2dx5O-hIce5etJu3PHDs-lhdIK_Oo'; // আপনার anon key দিন
-
+        
         const { createClient } = supabase;
         const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 
         window.onload = async () => {
-            const params = new URLSearchParams(window.location.search);
-            const shortCode = params.get('c');
-            const token = params.get('token');
+            const shortCode = new URLSearchParams(window.location.search).get('c');
+            if (!shortCode) return renderError();
 
-            if (!shortCode || !token) return renderError("Invalid Link. Please verify through the bot again.");
-            
-            const { data: link, error } = await supabaseClient.from('links').select('*').eq('short_code', shortCode).eq('verification_token', token).single();
-            if (error || !link) return renderError("Verification failed or link has expired.");
-            
-            renderAdView(link.long_url);
+            const { data, error } = await supabaseClient.from('links').select('*').eq('short_code', shortCode).single();
+            if (error || !data) return renderError();
+
+            if (data.is_locked && data.lock_channel) {
+                renderLockView(data.long_url, data.lock_channel);
+            } else {
+                renderAdView(data.long_url);
+            }
         };
 
-        function renderError(message) { document.getElementById('view-container').innerHTML = `<h1>${message}</h1>`; }
+        function renderError() { document.getElementById('view-container').innerHTML = `<h1>Error: Link not found.</h1>`; }
+
+        function renderLockView(longUrl, channelName) {
+            const channelLink = `https://t.me/${channelName.substring(1)}`;
+            document.getElementById('view-container').innerHTML = `
+                <h1>Complete Task to Unlock</h1>
+                <p>You must join the channel/group below to proceed.</p>
+                <div class="task">
+                    <div class="task-info">
+                        <span>Join ${channelName}</span>
+                        <p>Click the arrow to join</p>
+                    </div>
+                    <a href="${channelLink}" target="_blank" class="task-status">➡️</a>
+                </div>
+                <button class="action-btn" onclick="renderAdView('${longUrl}')">✅ Done, Continue</button>
+            `;
+        }
         
         function renderAdView(longUrl) {
-            document.getElementById('view-container').innerHTML = `<h1>Almost there!</h1><p>Please wait while we prepare your link.</p><div class="loader"></div>`;
+            document.getElementById('view-container').innerHTML = `
+                <h1>Almost there!</h1>
+                <p>Please wait while we prepare your link.</p>
+                <div class="loader"></div>
+            `;
+            
             const adCheckInterval = setInterval(() => {
                 if (typeof window.showGiga === 'function') {
                     clearInterval(adCheckInterval);
@@ -50,7 +78,7 @@
             }, 100);
 
             setTimeout(() => {
-                if (typeof window.showGiga !== 'function') {
+                if (typeof window.showG- !== 'function') {
                     clearInterval(adCheckInterval);
                     window.location.replace(longUrl);
                 }
