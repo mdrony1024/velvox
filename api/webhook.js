@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const VERCEL_APP_URL = "https://velgram.vercel.app";
+const VERCEL_APP_URL = "https://vox.vercel.app";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const telegramApiUrl = `https://api.telegram.org/bot${BOT_TOKEN}`;
