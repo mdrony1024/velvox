@@ -29,11 +29,7 @@
     </style>
 </head>
 <body>
-    <div class="container" id="view-container">
-        <h1>Almost there!</h1>
-        <p>Please wait while we prepare your link. You will be redirected shortly.</p>
-        <div class="loader"></div>
-    </div>
+    <div id="view-container"><h1>Loading Link...</h1></div>
 
     <script>
         // --- CONFIGURATION (SET FOR YOU) ---
@@ -56,12 +52,10 @@
             const isVerified = new URLSearchParams(window.location.search).get('verified');
 
             if (data.is_locked && !isVerified) {
-                // যদি লিংক লক করা থাকে, তাহলে লক পেজ দেখানো হবে
                 renderLockView(shortCode);
             } else {
-                // যদি লিংক লক করা না থাকে বা ভেরিফাই হয়ে আসে, তাহলে বিজ্ঞাপন দেখানো হবে
                 await supabaseClient.rpc('increment_clicks', { link_id: data.id });
-                waitForAdAndRedirect(data.long_url);
+                renderAdView(data.long_url);
             }
         };
 
@@ -70,35 +64,45 @@
         
         function renderLockView(shortCode) {
             const botUrl = `https://t.me/${BOT_USERNAME}?start=verify_${shortCode}`;
-            // লোডিং স্ক্রিনের পরিবর্তে লক পেজের কন্টেন্ট দেখানো হচ্ছে
             document.getElementById('view-container').innerHTML = `
                 <h1>🔒 Link Locked</h1>
                 <p>To unlock the link, you need to verify through our bot.</p>
                 <a href="${botUrl}" class="action-btn" style="background-color:#34c759;">Start Verification in Bot</a>
             `;
         }
-        
-        // --- ACTION FUNCTION ---
-        function waitForAdAndRedirect(url) {
+
+        function renderAdView(longUrl) {
+            // বিজ্ঞাপন লোড হওয়ার জন্য একটি সুন্দর মেসেজ দেখানো হচ্ছে
+            document.getElementById('view-container').innerHTML = `
+                <h1>Almost there!</h1>
+                <p>Please wait while we prepare your link. You will be redirected shortly.</p>
+                <div class="loader"></div>
+            `;
+            
+            // Gigads বিজ্ঞাপনটি প্রস্তুত হলে স্বয়ংক্রিয়ভাবে চালু করার জন্য ফাংশন কল করা
             const adCheckInterval = setInterval(() => {
                 if (typeof window.showGiga === 'function') {
                     clearInterval(adCheckInterval);
-                    showAdAndRedirect(url);
+                    showAdAndRedirect(longUrl);
                 }
             }, 100);
 
+             // যদি 5 সেকেন্ডের মধ্যে বিজ্ঞাপন লোড না হয়, সরাসরি রিডাইরেক্ট করে দেবে
             setTimeout(() => {
                 if (typeof window.showGiga !== 'function') {
                     clearInterval(adCheckInterval);
-                    window.location.replace(url);
+                    window.location.replace(longUrl);
                 }
             }, 5000);
         }
-
+        
+        // --- ACTION FUNCTION ---
         async function showAdAndRedirect(url) {
             try { 
                 await window.showGiga(); 
-            } catch (e) { }
+            } catch (e) {
+                // যদি বিজ্ঞাপন ব্লক করা থাকে বা কোনো এরর হয়
+            }
             window.location.replace(url);
         }
     </script>
