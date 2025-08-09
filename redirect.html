@@ -11,61 +11,37 @@
         .container { max-width: 350px; padding: 20px; }
         h1 { font-size: 1.6em; margin-bottom: 15px; }
         p { color: #8e8e93; }
-        .action-btn { display: block; background-color: #007aff; color: white; border: none; border-radius: 12px; padding: 15px; font-size: 1.1em; font-weight: bold; cursor: pointer; width: 100%; text-decoration: none; margin-top: 25px; }
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-    <div id="view-container"><h1>Loading Link...</h1></div>
+    <div id="view-container"><h1>Verifying your access...</h1><div class="loader"></div></div>
 
     <script>
-        // --- CONFIGURATION (SET FOR YOU) ---
-        const BOT_USERNAME = 'velvoxbot';
         const SUPABASE_URL = 'https://mtkqhvquzfgayhibbfih.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10a3FodnF1emZnYXloaWJiZmloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2MDc1NDYsImV4cCI6MjA3MDE4MzU0Nn0.mP_6fE3Y5oHD9D2dx5O-hIce5etJu3PHDs-lhdIK_Oo'; // আপনার anon key দিন
 
-        // --- INITIALIZATION ---
         const { createClient } = supabase;
         const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // --- CORE LOGIC ---
         window.onload = async () => {
-            const shortCode = new URLSearchParams(window.location.search).get('c');
-            if (!shortCode) return renderError();
+            const params = new URLSearchParams(window.location.search);
+            const shortCode = params.get('c');
+            const token = params.get('token');
 
-            const { data, error } = await supabaseClient.from('links').select('*').eq('short_code', shortCode).single();
-            if (error || !data) return renderError();
-
-            const isVerified = new URLSearchParams(window.location.search).get('verified');
-
-            if (data.is_locked && !isVerified) {
-                renderLockView(shortCode);
-            } else {
-                await supabaseClient.rpc('increment_clicks', { link_id: data.id });
-                renderAdView(data.long_url);
-            }
+            if (!shortCode || !token) return renderError("Invalid Link. Please verify through the bot again.");
+            
+            const { data: link, error } = await supabaseClient.from('links').select('*').eq('short_code', shortCode).eq('verification_token', token).single();
+            if (error || !link) return renderError("Verification failed or link has expired.");
+            
+            renderAdView(link.long_url);
         };
 
-        // --- VIEW RENDERING FUNCTIONS ---
-        function renderError() { document.getElementById('view-container').innerHTML = `<h1>Error: Link not found.</h1>`; }
+        function renderError(message) { document.getElementById('view-container').innerHTML = `<h1>${message}</h1>`; }
         
-        function renderLockView(shortCode) {
-            const botUrl = `https://t.me/${BOT_USERNAME}?start=verify_${shortCode}`;
-            document.getElementById('view-container').innerHTML = `
-                <h1>🔒 Link Locked</h1>
-                <p>To unlock the link, you need to verify through our bot.</p>
-                <a href="${botUrl}" class="action-btn" style="background-color:#34c759;">Start Verification in Bot</a>
-            `;
-        }
-
         function renderAdView(longUrl) {
-            document.getElementById('view-container').innerHTML = `
-                <h1>Almost there!</h1>
-                <p>Please wait while we prepare your link. You will be redirected shortly.</p>
-                <div class="loader"></div>
-            `;
-            
+            document.getElementById('view-container').innerHTML = `<h1>Almost there!</h1><p>Please wait while we prepare your link.</p><div class="loader"></div>`;
             const adCheckInterval = setInterval(() => {
                 if (typeof window.showGiga === 'function') {
                     clearInterval(adCheckInterval);
@@ -81,7 +57,6 @@
             }, 5000);
         }
         
-        // --- ACTION FUNCTION ---
         async function showAdAndRedirect(url) {
             try { await window.showGiga(); } catch (e) {}
             window.location.replace(url);
